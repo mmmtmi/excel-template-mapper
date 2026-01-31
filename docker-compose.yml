@@ -1,0 +1,17 @@
+services:
+  mysql:
+    image: mysql:8.0
+    ports:
+      - "3306:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: excel_template_mapper
+      MYSQL_USER: app
+      MYSQL_PASSWORD: app
+    volumes:
+      - mysql_data:/var/lib/mysql
+      # Project-owned MySQL config overrides (optional).
+      - ./db/mysql/conf.d:/etc/mysql/conf.d:ro
+
+volumes:
+  mysql_data:

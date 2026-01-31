@@ -1,0 +1,9 @@
+[mysqld]
+# Keep defaults unless we must pin behavior; this is mainly to avoid charset surprises.
+character-set-server = utf8mb4
+
+# Use an explicit offset so behavior is consistent regardless of the container host TZ.
+default_time_zone = "+09:00"
+
+[client]
+default-character-set = utf8mb4
