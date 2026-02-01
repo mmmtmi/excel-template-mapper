@@ -1,0 +1,4 @@
+.env
+local
+.gocache
+node_modules

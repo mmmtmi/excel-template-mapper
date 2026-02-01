@@ -1,42 +1,121 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
+	"flag"
 	"fmt"
 	"log"
-	"os"
+	"time"
 
 	"github.com/xuri/excelize/v2"
 
+	"github.com/mmmtmi/excel-template-mapper/internal/dbconn"
 	"github.com/mmmtmi/excel-template-mapper/internal/excel"
+	"github.com/mmmtmi/excel-template-mapper/internal/store/mysql"
 )
 
 func main() {
-	if len(os.Args) < 2 {
-		log.Fatal("usage: etm <excel-file>")
-	}
-	path := os.Args[1]
 
-	f, err := excelize.OpenFile(path)
-	if err != nil {
-		log.Fatalf("open failed: %v", err)
-	}
-	defer func() { _ = f.Close() }()
+	templateName := flag.String("template", "", "template name")
+	flag.Parse()
 
-	table, err := excel.ReadTable(f, excel.ReadOptions{
-		HeaderRow:    1,
-		DataStartRow: 2,
-		TrimHeader:   true,
-		SkipEmptyKey: true,
-	})
-	if err != nil {
-		log.Fatalf("read table failed: %v", err)
+	excelPath := ""
+
+	if excelPath == "" && *templateName == "" {
+		log.Fatal("usage: etm [--template demo_v1] [excel-file]")
 	}
 
-	// JSON pretty print
-	b, err := json.MarshalIndent(table.Rows, "", "  ")
-	if err != nil {
-		log.Fatalf("json marshal failed: %v", err)
+	if flag.NArg() >= 1 {
+		excelPath = flag.Arg(0)
 	}
-	fmt.Println(string(b))
+
+	if excelPath != "" {
+		f, err := excelize.OpenFile(excelPath)
+		if err != nil {
+			log.Fatalf("open failed: %v", err)
+		}
+		defer func() { _ = f.Close() }()
+
+		table, err := excel.ReadTable(f, excel.ReadOptions{
+			HeaderRow:    1,
+			DataStartRow: 2,
+			TrimHeader:   true,
+			SkipEmptyKey: true,
+		})
+		if err != nil {
+			log.Fatalf("read table failed: %v", err)
+		}
+
+		// JSON pretty print
+		b, err := json.MarshalIndent(table.Rows, "", "  ")
+		if err != nil {
+			log.Fatalf("json marshal failed: %v", err)
+		}
+		fmt.Println(string(b))
+	}
+
+	// env読み込み
+	cfg, err := dbconn.LoadMySQLConfigFromEnv(".env")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// db 接続
+	db, err := dbconn.Open(cfg)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer db.Close()
+
+	// ctx 初期化
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+
+	// mapping template の取得
+
+	if *templateName != "" {
+
+		// dbヘルスチェック
+		if err := dbconn.Ping(ctx, db); err != nil {
+			log.Fatal(err)
+		}
+		log.Println("データベースに正常に接続されました！")
+
+		//簡単な確認
+		one, err := dbconn.SelectOne(ctx, db)
+		if err != nil {
+			log.Fatal(err)
+		}
+		log.Printf("SELECT 1 => %d", one)
+
+		//テーブルの確認
+		tables, err := dbconn.ListTables(ctx, db)
+		if err != nil {
+			log.Fatal(err)
+		}
+		for _, t := range tables {
+			log.Printf("table: %s", t)
+		}
+
+		// テーブルの取り出し
+		tpl, err := mysql.GetTemplateByName(ctx, db, *templateName)
+		if err != nil {
+			log.Fatal(err)
+		}
+		log.Printf("template: id=%s name=%s target=%s sheet=%v header_row=%d data_start_row=%d",
+			tpl.ID, tpl.Name, tpl.Target, tpl.SheetName, tpl.HeaderRow, tpl.DataStartRow)
+
+		templateID := tpl.ID
+		rules, err := mysql.ListRulesByTemplateID(ctx, db, templateID)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		for _, r := range rules {
+			log.Printf("rule: %s %s -> %s transform=%v required=%t priority=%d",
+				r.SourceType, r.SourceKey, r.TargetLabel, r.Transform, r.Required, r.Priority)
+		}
+	}
+
 }
