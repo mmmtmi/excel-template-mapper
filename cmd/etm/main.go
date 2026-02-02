@@ -12,6 +12,7 @@ import (
 
 	"github.com/mmmtmi/excel-template-mapper/internal/dbconn"
 	"github.com/mmmtmi/excel-template-mapper/internal/excel"
+	"github.com/mmmtmi/excel-template-mapper/internal/model"
 	"github.com/mmmtmi/excel-template-mapper/internal/store/mysql"
 )
 
@@ -22,14 +23,15 @@ func main() {
 
 	excelPath := ""
 
-	if excelPath == "" && *templateName == "" {
-		log.Fatal("usage: etm [--template demo_v1] [excel-file]")
-	}
-
 	if flag.NArg() >= 1 {
 		excelPath = flag.Arg(0)
 	}
 
+	if excelPath == "" && *templateName == "" {
+		log.Fatal("usage: etm [--template demo_v1] [excel-file]")
+	}
+
+	var table *excel.Table
 	if excelPath != "" {
 		f, err := excelize.OpenFile(excelPath)
 		if err != nil {
@@ -37,7 +39,7 @@ func main() {
 		}
 		defer func() { _ = f.Close() }()
 
-		table, err := excel.ReadTable(f, excel.ReadOptions{
+		table, err = excel.ReadTable(f, excel.ReadOptions{
 			HeaderRow:    1,
 			DataStartRow: 2,
 			TrimHeader:   true,
@@ -55,26 +57,27 @@ func main() {
 		fmt.Println(string(b))
 	}
 
-	// env読み込み
-	cfg, err := dbconn.LoadMySQLConfigFromEnv(".env")
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	// db 接続
-	db, err := dbconn.Open(cfg)
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer db.Close()
-
-	// ctx 初期化
-	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
-	defer cancel()
-
-	// mapping template の取得
-
+	var rules []model.Rule
 	if *templateName != "" {
+
+		// env読み込み
+		cfg, err := dbconn.LoadMySQLConfigFromEnv(".env")
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		// db 接続
+		db, err := dbconn.Open(cfg)
+		if err != nil {
+			log.Fatal(err)
+		}
+		defer db.Close()
+
+		// ctx 初期化
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+
+		// mapping template の取得
 
 		// dbヘルスチェック
 		if err := dbconn.Ping(ctx, db); err != nil {
@@ -107,7 +110,7 @@ func main() {
 			tpl.ID, tpl.Name, tpl.Target, tpl.SheetName, tpl.HeaderRow, tpl.DataStartRow)
 
 		templateID := tpl.ID
-		rules, err := mysql.ListRulesByTemplateID(ctx, db, templateID)
+		rules, err = mysql.ListRulesByTemplateID(ctx, db, templateID)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -116,6 +119,34 @@ func main() {
 			log.Printf("rule: %s %s -> %s transform=%v required=%t priority=%d",
 				r.SourceType, r.SourceKey, r.TargetLabel, r.Transform, r.Required, r.Priority)
 		}
+	}
+
+	if table != nil && len(rules) > 0 {
+		keyAndLabel := make(map[string]string)
+		for _, r := range rules {
+			if r.SourceType == "HEADER" {
+				keyAndLabel[r.SourceKey] = r.TargetLabel
+			}
+		}
+		for key, value := range keyAndLabel {
+			log.Printf("key=%s,value=%s", key, value)
+		}
+
+		outRows := make([]map[string]any, 0, len(table.Rows))
+		for _, row := range table.Rows {
+			outRow := make(map[string]any)
+			for c, targetLabel := range keyAndLabel {
+				outRow[targetLabel] = row[c]
+			}
+			outRows = append(outRows, outRow)
+		}
+
+		b, err := json.MarshalIndent(outRows, "", "  ")
+		if err != nil {
+			log.Fatalf("json marshal failed: %v", err)
+		}
+		fmt.Println(string(b))
+
 	}
 
 }
