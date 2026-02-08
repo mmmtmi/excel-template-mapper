@@ -6,6 +6,7 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"strings"
 	"time"
 
 	"github.com/xuri/excelize/v2"
@@ -19,6 +20,7 @@ import (
 func main() {
 
 	templateName := flag.String("template", "", "template name")
+	debugFlag := flag.Bool("debug", false, "enable debug logs")
 	flag.Parse()
 
 	excelPath := ""
@@ -32,6 +34,12 @@ func main() {
 	}
 
 	var table *excel.Table
+	var readOptions = &excel.ReadOptions{
+		HeaderRow:    1,
+		DataStartRow: 2,
+		TrimHeader:   true,
+		SkipEmptyKey: true,
+	}
 	if excelPath != "" {
 		f, err := excelize.OpenFile(excelPath)
 		if err != nil {
@@ -39,22 +47,20 @@ func main() {
 		}
 		defer func() { _ = f.Close() }()
 
-		table, err = excel.ReadTable(f, excel.ReadOptions{
-			HeaderRow:    1,
-			DataStartRow: 2,
-			TrimHeader:   true,
-			SkipEmptyKey: true,
-		})
+		table, err = excel.ReadTable(f, *readOptions)
 		if err != nil {
 			log.Fatalf("read table failed: %v", err)
 		}
 
-		// JSON pretty print
-		b, err := json.MarshalIndent(table.Rows, "", "  ")
-		if err != nil {
-			log.Fatalf("json marshal failed: %v", err)
+		if *debugFlag {
+
+			// JSON pretty print
+			b, err := json.MarshalIndent(table.Rows, "", "  ")
+			if err != nil {
+				log.Fatalf("json marshal failed: %v", err)
+			}
+			fmt.Println(string(b))
 		}
-		fmt.Println(string(b))
 	}
 
 	var rules []model.Rule
@@ -85,29 +91,11 @@ func main() {
 		}
 		log.Println("データベースに正常に接続されました！")
 
-		//簡単な確認
-		one, err := dbconn.SelectOne(ctx, db)
-		if err != nil {
-			log.Fatal(err)
-		}
-		log.Printf("SELECT 1 => %d", one)
-
-		//テーブルの確認
-		tables, err := dbconn.ListTables(ctx, db)
-		if err != nil {
-			log.Fatal(err)
-		}
-		for _, t := range tables {
-			log.Printf("table: %s", t)
-		}
-
 		// テーブルの取り出し
 		tpl, err := mysql.GetTemplateByName(ctx, db, *templateName)
 		if err != nil {
 			log.Fatal(err)
 		}
-		log.Printf("template: id=%s name=%s target=%s sheet=%v header_row=%d data_start_row=%d",
-			tpl.ID, tpl.Name, tpl.Target, tpl.SheetName, tpl.HeaderRow, tpl.DataStartRow)
 
 		templateID := tpl.ID
 		rules, err = mysql.ListRulesByTemplateID(ctx, db, templateID)
@@ -115,28 +103,92 @@ func main() {
 			log.Fatal(err)
 		}
 
-		for _, r := range rules {
-			log.Printf("rule: %s %s -> %s transform=%v required=%t priority=%d",
-				r.SourceType, r.SourceKey, r.TargetLabel, r.Transform, r.Required, r.Priority)
+		if *debugFlag {
+
+			// tpl.SheetNameの整形
+			var ts any = nil
+			if tpl.SheetName != nil {
+				ts = *tpl.SheetName
+			}
+			log.Printf("template: id=%s name=%s target=%s sheet=%v header_row=%d data_start_row=%d",
+				tpl.ID, tpl.Name, tpl.Target, ts, tpl.HeaderRow, tpl.DataStartRow)
+
+			//簡単な確認
+			one, err := dbconn.SelectOne(ctx, db)
+			if err != nil {
+				log.Fatal(err)
+			}
+			log.Printf("SELECT 1 => %d", one)
+
+			//テーブルの確認
+			tables, err := dbconn.ListTables(ctx, db)
+			if err != nil {
+				log.Fatal(err)
+			}
+			for _, t := range tables {
+				log.Printf("table: %s", t)
+			}
+
+			for _, r := range rules {
+				// r.Transformの整形。
+				var tr any = nil
+				if r.Transform != nil {
+					tr = *r.Transform
+				}
+				log.Printf("rule: %s %s -> %s transform=%v required=%t priority=%d",
+					r.SourceType, r.SourceKey, r.TargetLabel, tr, r.Required, r.Priority)
+			}
 		}
 	}
 
 	if table != nil && len(rules) > 0 {
-		keyAndLabel := make(map[string]string)
+		// requiredがTrueのとき、対象のヘッダーが無いとエラーになる。
+		set := make(map[string]bool)
+		for _, th := range table.Headers {
+			set[th] = true
+		}
+		var requiredRules []model.Rule
 		for _, r := range rules {
-			if r.SourceType == "HEADER" {
-				keyAndLabel[r.SourceKey] = r.TargetLabel
+			if r.Required {
+				requiredRules = append(requiredRules, r)
+
+				if !set[r.SourceKey] {
+					log.Fatalf("required header missing: %s", r.SourceKey)
+				}
 			}
 		}
-		for key, value := range keyAndLabel {
-			log.Printf("key=%s,value=%s", key, value)
-		}
+
+		// 一旦表示
+		// for key, value := range keyAndLabel {
+		// 	log.Printf("key=%s,value=%s", key, value)
+		// }
 
 		outRows := make([]map[string]any, 0, len(table.Rows))
-		for _, row := range table.Rows {
+		for i, row := range table.Rows {
+			// requiredがTrueのとき、値がないとエラーになる
+			for _, r := range requiredRules {
+				if r.SourceType == "HEADER" {
+					if row[r.SourceKey] == nil {
+						log.Fatalf("required value missing: row=%d header=%s label=%s",
+							readOptions.DataStartRow+i, r.SourceKey, r.TargetLabel)
+					}
+				}
+			}
+
 			outRow := make(map[string]any)
-			for c, targetLabel := range keyAndLabel {
-				outRow[targetLabel] = row[c]
+			for _, r := range rules {
+				if r.SourceType != "HEADER" {
+					continue
+				}
+
+				val := row[r.SourceKey]
+				if r.Transform != nil && *r.Transform == "trim" {
+					if s, ok := val.(string); ok {
+						val = strings.TrimSpace(s)
+					}
+				}
+
+				outRow[r.TargetLabel] = val
 			}
 			outRows = append(outRows, outRow)
 		}
