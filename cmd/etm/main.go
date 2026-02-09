@@ -30,40 +30,18 @@ func main() {
 	}
 
 	if excelPath == "" && *templateName == "" {
-		log.Fatal("usage: etm [--template demo_v1] [excel-file]")
+		log.Fatal("usage: etm --template demo_v1 <excel-file>")
 	}
 
-	var table *excel.Table
-	var readOptions = &excel.ReadOptions{
+	var readOptions = excel.ReadOptions{
 		HeaderRow:    1,
 		DataStartRow: 2,
 		TrimHeader:   true,
 		SkipEmptyKey: true,
 	}
-	if excelPath != "" {
-		f, err := excelize.OpenFile(excelPath)
-		if err != nil {
-			log.Fatalf("open failed: %v", err)
-		}
-		defer func() { _ = f.Close() }()
-
-		table, err = excel.ReadTable(f, *readOptions)
-		if err != nil {
-			log.Fatalf("read table failed: %v", err)
-		}
-
-		if *debugFlag {
-
-			// JSON pretty print
-			b, err := json.MarshalIndent(table.Rows, "", "  ")
-			if err != nil {
-				log.Fatalf("json marshal failed: %v", err)
-			}
-			fmt.Println(string(b))
-		}
-	}
 
 	var rules []model.Rule
+	var tpl *model.Template
 	if *templateName != "" {
 
 		// env読み込み
@@ -82,8 +60,6 @@ func main() {
 		// ctx 初期化
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer cancel()
-
-		// mapping template の取得
 
 		// dbヘルスチェック
 		if err := dbconn.Ping(ctx, db); err != nil {
@@ -141,6 +117,42 @@ func main() {
 		}
 	}
 
+	if tpl != nil {
+		if tpl.SheetName != nil {
+			readOptions.SheetName = *tpl.SheetName
+		}
+		if tpl.HeaderRow != 0 {
+			readOptions.HeaderRow = tpl.HeaderRow
+		}
+		if tpl.DataStartRow != 0 {
+			readOptions.DataStartRow = tpl.DataStartRow
+		}
+	}
+
+	var table *excel.Table
+	if excelPath != "" {
+		f, err := excelize.OpenFile(excelPath)
+		if err != nil {
+			log.Fatalf("open failed: %v", err)
+		}
+		defer func() { _ = f.Close() }()
+
+		table, err = excel.ReadTable(f, readOptions)
+		if err != nil {
+			log.Fatalf("read table failed: %v", err)
+		}
+
+		if *debugFlag {
+
+			// JSON pretty print
+			b, err := json.MarshalIndent(table.Rows, "", "  ")
+			if err != nil {
+				log.Fatalf("json marshal failed: %v", err)
+			}
+			fmt.Println(string(b))
+		}
+	}
+
 	if table != nil && len(rules) > 0 {
 		// requiredがTrueのとき、対象のヘッダーが無いとエラーになる。
 		set := make(map[string]bool)
@@ -149,7 +161,7 @@ func main() {
 		}
 		var requiredRules []model.Rule
 		for _, r := range rules {
-			if r.Required {
+			if r.Required && r.SourceType == "HEADER" {
 				requiredRules = append(requiredRules, r)
 
 				if !set[r.SourceKey] {
@@ -165,15 +177,6 @@ func main() {
 
 		outRows := make([]map[string]any, 0, len(table.Rows))
 		for i, row := range table.Rows {
-			// requiredがTrueのとき、値がないとエラーになる
-			for _, r := range requiredRules {
-				if r.SourceType == "HEADER" {
-					if row[r.SourceKey] == nil {
-						log.Fatalf("required value missing: row=%d header=%s label=%s",
-							readOptions.DataStartRow+i, r.SourceKey, r.TargetLabel)
-					}
-				}
-			}
 
 			outRow := make(map[string]any)
 			for _, r := range rules {
@@ -189,6 +192,17 @@ func main() {
 				}
 
 				outRow[r.TargetLabel] = val
+
+			}
+
+			// requiredがTrueのとき、値がないとエラーになる
+			for _, r := range requiredRules {
+				val := outRow[r.TargetLabel]
+				if isMissing(val) {
+					log.Fatalf("required value missing: row=%d header=%s label=%s",
+						readOptions.DataStartRow+i, r.SourceKey, r.TargetLabel)
+				}
+
 			}
 			outRows = append(outRows, outRow)
 		}
@@ -201,4 +215,14 @@ func main() {
 
 	}
 
+}
+
+func isMissing(v any) bool {
+	if v == nil {
+		return true
+	}
+	if s, ok := v.(string); ok {
+		return strings.TrimSpace(s) == ""
+	}
+	return false
 }
