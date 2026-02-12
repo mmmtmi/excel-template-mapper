@@ -176,7 +176,7 @@ func main() {
 		// }
 
 		outRows := make([]map[string]any, 0, len(table.Rows))
-		for i, row := range table.Rows {
+		for _, row := range table.Rows {
 
 			outRow := make(map[string]any)
 			for _, r := range rules {
@@ -184,7 +184,7 @@ func main() {
 					continue
 				}
 
-				val := row[r.SourceKey]
+				val := row.Values[r.SourceKey]
 				if r.Transform != nil && *r.Transform == "trim" {
 					if s, ok := val.(string); ok {
 						val = strings.TrimSpace(s)
@@ -200,7 +200,7 @@ func main() {
 				val := outRow[r.TargetLabel]
 				if isMissing(val) {
 					log.Fatalf("required value missing: row=%d header=%s label=%s",
-						readOptions.DataStartRow+i, r.SourceKey, r.TargetLabel)
+						row.ExcelRow, r.SourceKey, r.TargetLabel)
 				}
 
 			}

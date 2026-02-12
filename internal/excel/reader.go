@@ -7,9 +7,14 @@ import (
 	"github.com/xuri/excelize/v2"
 )
 
+type Row struct {
+	ExcelRow int
+	Values   map[string]any
+}
+
 type Table struct {
 	Headers []string
-	Rows    []map[string]any // key: header label (Japanese OK)
+	Rows    []*Row // key: header label (Japanese OK)
 }
 
 type ReadOptions struct {
@@ -60,7 +65,7 @@ func ReadTable(f *excelize.File, opt ReadOptions) (*Table, error) {
 
 	out := &Table{
 		Headers: headers,
-		Rows:    make([]map[string]any, 0),
+		Rows:    []*Row{},
 	}
 
 	for r := opt.DataStartRow - 1; r < len(rows); r++ {
@@ -93,8 +98,11 @@ func ReadTable(f *excelize.File, opt ReadOptions) (*Table, error) {
 		if allNil {
 			continue
 		}
-
-		out.Rows = append(out.Rows, record)
+		excelRow := r + 1 + (opt.HeaderRow - 1)
+		out.Rows = append(out.Rows, &Row{
+			ExcelRow: excelRow,
+			Values:   record,
+		})
 	}
 
 	return out, nil

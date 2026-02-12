@@ -1,0 +1,76 @@
+# GraphQL schema example
+#
+# https://gqlgen.com/getting-started/
+
+  type Template {
+    id: ID!
+    name: String!
+    target: String!
+    sheetName: String
+    headerRow: Int!
+    dataStartRow: Int!
+    notes: String
+    createdAt: String
+    updatedAt: String
+  }
+
+  type Rule {
+    id: ID!
+    templateId: ID!
+    sourceType: String!
+    sourceKey: String!
+    targetID: String!
+    targetLabel: String!
+    canonicalKey: String
+    transform: String
+    required: Boolean!
+    priority: Int
+    evidence: String
+    createdAt: String!
+    updatedAt: String!
+  }
+
+  type Query {
+    templates: [Template!]!
+    template(name: String!): Template
+    rules(templateId: ID!): [Rule!]!
+  }
+
+  input CreateTemplateInput {
+    name: String!
+    sheetName: String
+    headerRow: Int!
+    dataStartRow: Int!
+  }
+
+  input CreateRuleInput {
+    templateId: ID!
+    sourceKey: String!
+    sourceType: String!
+    targetLabel: String!
+    transform: String
+    required: Boolean!
+  }
+  
+  input UpdateTemplateInput {
+    name: String
+    sheetName: String
+    headerRow: Int
+    dataStartRow: Int
+  }
+
+  input UpdateRuleInput{
+    sourceKey: String
+    sourceType: String
+    targetLabel: String
+    transform: String
+    required: Boolean
+  }
+
+  type Mutation {
+    createTemplate(input: CreateTemplateInput!): Template!
+    updateTemplate(id: ID!, input: UpdateTemplateInput!): Template!
+    
+    createRule(input: CreateRuleInput!): Rule!
+    updateRule(id: ID!, input: UpdateRuleInput!): Rule!
+  }
