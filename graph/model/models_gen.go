@@ -18,6 +18,12 @@ type CreateTemplateInput struct {
 	DataStartRow int32   `json:"dataStartRow"`
 }
 
+type DraftFromExcelPayload struct {
+	Headers    []string     `json:"headers"`
+	SampleRows [][]string   `json:"sampleRows"`
+	DraftRules []*RuleDraft `json:"draftRules"`
+}
+
 type Mutation struct {
 }
 
@@ -38,6 +44,14 @@ type Rule struct {
 	Evidence     *string `json:"evidence,omitempty"`
 	CreatedAt    string  `json:"createdAt"`
 	UpdatedAt    string  `json:"updatedAt"`
+}
+
+type RuleDraft struct {
+	SourceType  string  `json:"sourceType"`
+	SourceKey   string  `json:"sourceKey"`
+	TargetLabel string  `json:"targetLabel"`
+	Transform   *string `json:"transform,omitempty"`
+	Required    bool    `json:"required"`
 }
 
 type Template struct {

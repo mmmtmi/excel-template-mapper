@@ -2,6 +2,24 @@
 #
 # https://gqlgen.com/getting-started/
 
+scalar Upload
+
+  # Edit by CODEX: rule draft for UI (no templateId yet)
+  type RuleDraft {
+    sourceType: String!
+    sourceKey: String!
+    targetLabel: String!
+    transform: String
+    required: Boolean!
+  }
+
+  type DraftFromExcelPayload {
+    headers: [String!]!
+    # Edit by CODEX: preview cells are always string; empty cell becomes "".
+    sampleRows: [[String!]!]!
+    draftRules: [RuleDraft!]!
+  }
+
   type Template {
     id: ID!
     name: String!
@@ -73,4 +91,10 @@
     
     createRule(input: CreateRuleInput!): Rule!
     updateRule(id: ID!, input: UpdateRuleInput!): Rule!
+
+    # Edit by CODEX: Excel upload (PoC: return JSON as string)
+    processExcel(templateName: String!, file: Upload!): String!
+    processExcelOnly(file: Upload!): String!
+
+    draftRulesFromExcel(file: Upload!): DraftFromExcelPayload!
   }

@@ -47,11 +47,20 @@ type DirectiveRoot struct {
 }
 
 type ComplexityRoot struct {
+	DraftFromExcelPayload struct {
+		DraftRules func(childComplexity int) int
+		Headers    func(childComplexity int) int
+		SampleRows func(childComplexity int) int
+	}
+
 	Mutation struct {
-		CreateRule     func(childComplexity int, input model.CreateRuleInput) int
-		CreateTemplate func(childComplexity int, input model.CreateTemplateInput) int
-		UpdateRule     func(childComplexity int, id string, input model.UpdateRuleInput) int
-		UpdateTemplate func(childComplexity int, id string, input model.UpdateTemplateInput) int
+		CreateRule          func(childComplexity int, input model.CreateRuleInput) int
+		CreateTemplate      func(childComplexity int, input model.CreateTemplateInput) int
+		DraftRulesFromExcel func(childComplexity int, file graphql.Upload) int
+		ProcessExcel        func(childComplexity int, templateName string, file graphql.Upload) int
+		ProcessExcelOnly    func(childComplexity int, file graphql.Upload) int
+		UpdateRule          func(childComplexity int, id string, input model.UpdateRuleInput) int
+		UpdateTemplate      func(childComplexity int, id string, input model.UpdateTemplateInput) int
 	}
 
 	Query struct {
@@ -76,6 +85,14 @@ type ComplexityRoot struct {
 		UpdatedAt    func(childComplexity int) int
 	}
 
+	RuleDraft struct {
+		Required    func(childComplexity int) int
+		SourceKey   func(childComplexity int) int
+		SourceType  func(childComplexity int) int
+		TargetLabel func(childComplexity int) int
+		Transform   func(childComplexity int) int
+	}
+
 	Template struct {
 		CreatedAt    func(childComplexity int) int
 		DataStartRow func(childComplexity int) int
@@ -94,6 +111,9 @@ type MutationResolver interface {
 	UpdateTemplate(ctx context.Context, id string, input model.UpdateTemplateInput) (*model.Template, error)
 	CreateRule(ctx context.Context, input model.CreateRuleInput) (*model.Rule, error)
 	UpdateRule(ctx context.Context, id string, input model.UpdateRuleInput) (*model.Rule, error)
+	ProcessExcel(ctx context.Context, templateName string, file graphql.Upload) (string, error)
+	ProcessExcelOnly(ctx context.Context, file graphql.Upload) (string, error)
+	DraftRulesFromExcel(ctx context.Context, file graphql.Upload) (*model.DraftFromExcelPayload, error)
 }
 type QueryResolver interface {
 	Templates(ctx context.Context) ([]*model.Template, error)
@@ -120,6 +140,25 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 	_ = ec
 	switch typeName + "." + field {
 
+	case "DraftFromExcelPayload.draftRules":
+		if e.complexity.DraftFromExcelPayload.DraftRules == nil {
+			break
+		}
+
+		return e.complexity.DraftFromExcelPayload.DraftRules(childComplexity), true
+	case "DraftFromExcelPayload.headers":
+		if e.complexity.DraftFromExcelPayload.Headers == nil {
+			break
+		}
+
+		return e.complexity.DraftFromExcelPayload.Headers(childComplexity), true
+	case "DraftFromExcelPayload.sampleRows":
+		if e.complexity.DraftFromExcelPayload.SampleRows == nil {
+			break
+		}
+
+		return e.complexity.DraftFromExcelPayload.SampleRows(childComplexity), true
+
 	case "Mutation.createRule":
 		if e.complexity.Mutation.CreateRule == nil {
 			break
@@ -142,6 +181,39 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.Mutation.CreateTemplate(childComplexity, args["input"].(model.CreateTemplateInput)), true
+	case "Mutation.draftRulesFromExcel":
+		if e.complexity.Mutation.DraftRulesFromExcel == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_draftRulesFromExcel_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Mutation.DraftRulesFromExcel(childComplexity, args["file"].(graphql.Upload)), true
+	case "Mutation.processExcel":
+		if e.complexity.Mutation.ProcessExcel == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_processExcel_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Mutation.ProcessExcel(childComplexity, args["templateName"].(string), args["file"].(graphql.Upload)), true
+	case "Mutation.processExcelOnly":
+		if e.complexity.Mutation.ProcessExcelOnly == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_processExcelOnly_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Mutation.ProcessExcelOnly(childComplexity, args["file"].(graphql.Upload)), true
 	case "Mutation.updateRule":
 		if e.complexity.Mutation.UpdateRule == nil {
 			break
@@ -272,6 +344,37 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.Rule.UpdatedAt(childComplexity), true
+
+	case "RuleDraft.required":
+		if e.complexity.RuleDraft.Required == nil {
+			break
+		}
+
+		return e.complexity.RuleDraft.Required(childComplexity), true
+	case "RuleDraft.sourceKey":
+		if e.complexity.RuleDraft.SourceKey == nil {
+			break
+		}
+
+		return e.complexity.RuleDraft.SourceKey(childComplexity), true
+	case "RuleDraft.sourceType":
+		if e.complexity.RuleDraft.SourceType == nil {
+			break
+		}
+
+		return e.complexity.RuleDraft.SourceType(childComplexity), true
+	case "RuleDraft.targetLabel":
+		if e.complexity.RuleDraft.TargetLabel == nil {
+			break
+		}
+
+		return e.complexity.RuleDraft.TargetLabel(childComplexity), true
+	case "RuleDraft.transform":
+		if e.complexity.RuleDraft.Transform == nil {
+			break
+		}
+
+		return e.complexity.RuleDraft.Transform(childComplexity), true
 
 	case "Template.createdAt":
 		if e.complexity.Template.CreatedAt == nil {
@@ -478,6 +581,44 @@ func (ec *executionContext) field_Mutation_createTemplate_args(ctx context.Conte
 	return args, nil
 }
 
+func (ec *executionContext) field_Mutation_draftRulesFromExcel_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "file", ec.unmarshalNUpload2githubᚗcomᚋ99designsᚋgqlgenᚋgraphqlᚐUpload)
+	if err != nil {
+		return nil, err
+	}
+	args["file"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_Mutation_processExcelOnly_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "file", ec.unmarshalNUpload2githubᚗcomᚋ99designsᚋgqlgenᚋgraphqlᚐUpload)
+	if err != nil {
+		return nil, err
+	}
+	args["file"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_Mutation_processExcel_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "templateName", ec.unmarshalNString2string)
+	if err != nil {
+		return nil, err
+	}
+	args["templateName"] = arg0
+	arg1, err := graphql.ProcessArgField(ctx, rawArgs, "file", ec.unmarshalNUpload2githubᚗcomᚋ99designsᚋgqlgenᚋgraphqlᚐUpload)
+	if err != nil {
+		return nil, err
+	}
+	args["file"] = arg1
+	return args, nil
+}
+
 func (ec *executionContext) field_Mutation_updateRule_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
 	var err error
 	args := map[string]any{}
@@ -594,6 +735,105 @@ func (ec *executionContext) field___Type_fields_args(ctx context.Context, rawArg
 // endregion ************************** directives.gotpl **************************
 
 // region    **************************** field.gotpl *****************************
+
+func (ec *executionContext) _DraftFromExcelPayload_headers(ctx context.Context, field graphql.CollectedField, obj *model.DraftFromExcelPayload) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_DraftFromExcelPayload_headers,
+		func(ctx context.Context) (any, error) {
+			return obj.Headers, nil
+		},
+		nil,
+		ec.marshalNString2ᚕstringᚄ,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_DraftFromExcelPayload_headers(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "DraftFromExcelPayload",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _DraftFromExcelPayload_sampleRows(ctx context.Context, field graphql.CollectedField, obj *model.DraftFromExcelPayload) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_DraftFromExcelPayload_sampleRows,
+		func(ctx context.Context) (any, error) {
+			return obj.SampleRows, nil
+		},
+		nil,
+		ec.marshalNString2ᚕᚕstringᚄ,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_DraftFromExcelPayload_sampleRows(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "DraftFromExcelPayload",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _DraftFromExcelPayload_draftRules(ctx context.Context, field graphql.CollectedField, obj *model.DraftFromExcelPayload) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_DraftFromExcelPayload_draftRules,
+		func(ctx context.Context) (any, error) {
+			return obj.DraftRules, nil
+		},
+		nil,
+		ec.marshalNRuleDraft2ᚕᚖgithubᚗcomᚋmmmtmiᚋexcelᚑtemplateᚑmapperᚋgraphᚋmodelᚐRuleDraftᚄ,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_DraftFromExcelPayload_draftRules(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "DraftFromExcelPayload",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "sourceType":
+				return ec.fieldContext_RuleDraft_sourceType(ctx, field)
+			case "sourceKey":
+				return ec.fieldContext_RuleDraft_sourceKey(ctx, field)
+			case "targetLabel":
+				return ec.fieldContext_RuleDraft_targetLabel(ctx, field)
+			case "transform":
+				return ec.fieldContext_RuleDraft_transform(ctx, field)
+			case "required":
+				return ec.fieldContext_RuleDraft_required(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type RuleDraft", field.Name)
+		},
+	}
+	return fc, nil
+}
 
 func (ec *executionContext) _Mutation_createTemplate(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
@@ -849,6 +1089,137 @@ func (ec *executionContext) fieldContext_Mutation_updateRule(ctx context.Context
 	}()
 	ctx = graphql.WithFieldContext(ctx, fc)
 	if fc.Args, err = ec.field_Mutation_updateRule_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Mutation_processExcel(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_Mutation_processExcel,
+		func(ctx context.Context) (any, error) {
+			fc := graphql.GetFieldContext(ctx)
+			return ec.resolvers.Mutation().ProcessExcel(ctx, fc.Args["templateName"].(string), fc.Args["file"].(graphql.Upload))
+		},
+		nil,
+		ec.marshalNString2string,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_Mutation_processExcel(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_processExcel_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Mutation_processExcelOnly(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_Mutation_processExcelOnly,
+		func(ctx context.Context) (any, error) {
+			fc := graphql.GetFieldContext(ctx)
+			return ec.resolvers.Mutation().ProcessExcelOnly(ctx, fc.Args["file"].(graphql.Upload))
+		},
+		nil,
+		ec.marshalNString2string,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_Mutation_processExcelOnly(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_processExcelOnly_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Mutation_draftRulesFromExcel(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_Mutation_draftRulesFromExcel,
+		func(ctx context.Context) (any, error) {
+			fc := graphql.GetFieldContext(ctx)
+			return ec.resolvers.Mutation().DraftRulesFromExcel(ctx, fc.Args["file"].(graphql.Upload))
+		},
+		nil,
+		ec.marshalNDraftFromExcelPayload2ᚖgithubᚗcomᚋmmmtmiᚋexcelᚑtemplateᚑmapperᚋgraphᚋmodelᚐDraftFromExcelPayload,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_Mutation_draftRulesFromExcel(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "headers":
+				return ec.fieldContext_DraftFromExcelPayload_headers(ctx, field)
+			case "sampleRows":
+				return ec.fieldContext_DraftFromExcelPayload_sampleRows(ctx, field)
+			case "draftRules":
+				return ec.fieldContext_DraftFromExcelPayload_draftRules(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type DraftFromExcelPayload", field.Name)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_draftRulesFromExcel_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
 		return fc, err
 	}
@@ -1514,6 +1885,151 @@ func (ec *executionContext) fieldContext_Rule_updatedAt(_ context.Context, field
 		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _RuleDraft_sourceType(ctx context.Context, field graphql.CollectedField, obj *model.RuleDraft) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_RuleDraft_sourceType,
+		func(ctx context.Context) (any, error) {
+			return obj.SourceType, nil
+		},
+		nil,
+		ec.marshalNString2string,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_RuleDraft_sourceType(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "RuleDraft",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _RuleDraft_sourceKey(ctx context.Context, field graphql.CollectedField, obj *model.RuleDraft) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_RuleDraft_sourceKey,
+		func(ctx context.Context) (any, error) {
+			return obj.SourceKey, nil
+		},
+		nil,
+		ec.marshalNString2string,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_RuleDraft_sourceKey(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "RuleDraft",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _RuleDraft_targetLabel(ctx context.Context, field graphql.CollectedField, obj *model.RuleDraft) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_RuleDraft_targetLabel,
+		func(ctx context.Context) (any, error) {
+			return obj.TargetLabel, nil
+		},
+		nil,
+		ec.marshalNString2string,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_RuleDraft_targetLabel(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "RuleDraft",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _RuleDraft_transform(ctx context.Context, field graphql.CollectedField, obj *model.RuleDraft) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_RuleDraft_transform,
+		func(ctx context.Context) (any, error) {
+			return obj.Transform, nil
+		},
+		nil,
+		ec.marshalOString2ᚖstring,
+		true,
+		false,
+	)
+}
+
+func (ec *executionContext) fieldContext_RuleDraft_transform(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "RuleDraft",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _RuleDraft_required(ctx context.Context, field graphql.CollectedField, obj *model.RuleDraft) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_RuleDraft_required,
+		func(ctx context.Context) (any, error) {
+			return obj.Required, nil
+		},
+		nil,
+		ec.marshalNBoolean2bool,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_RuleDraft_required(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "RuleDraft",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Boolean does not have child fields")
 		},
 	}
 	return fc, nil
@@ -3447,6 +3963,55 @@ func (ec *executionContext) unmarshalInputUpdateTemplateInput(ctx context.Contex
 
 // region    **************************** object.gotpl ****************************
 
+var draftFromExcelPayloadImplementors = []string{"DraftFromExcelPayload"}
+
+func (ec *executionContext) _DraftFromExcelPayload(ctx context.Context, sel ast.SelectionSet, obj *model.DraftFromExcelPayload) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, draftFromExcelPayloadImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("DraftFromExcelPayload")
+		case "headers":
+			out.Values[i] = ec._DraftFromExcelPayload_headers(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "sampleRows":
+			out.Values[i] = ec._DraftFromExcelPayload_sampleRows(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "draftRules":
+			out.Values[i] = ec._DraftFromExcelPayload_draftRules(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
+
+	for label, dfs := range deferred {
+		ec.processDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
 var mutationImplementors = []string{"Mutation"}
 
 func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet) graphql.Marshaler {
@@ -3490,6 +4055,27 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 		case "updateRule":
 			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
 				return ec._Mutation_updateRule(ctx, field)
+			})
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "processExcel":
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_processExcel(ctx, field)
+			})
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "processExcelOnly":
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_processExcelOnly(ctx, field)
+			})
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "draftRulesFromExcel":
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_draftRulesFromExcel(ctx, field)
 			})
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
@@ -3691,6 +4277,62 @@ func (ec *executionContext) _Rule(ctx context.Context, sel ast.SelectionSet, obj
 			}
 		case "updatedAt":
 			out.Values[i] = ec._Rule_updatedAt(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
+
+	for label, dfs := range deferred {
+		ec.processDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
+var ruleDraftImplementors = []string{"RuleDraft"}
+
+func (ec *executionContext) _RuleDraft(ctx context.Context, sel ast.SelectionSet, obj *model.RuleDraft) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, ruleDraftImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("RuleDraft")
+		case "sourceType":
+			out.Values[i] = ec._RuleDraft_sourceType(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "sourceKey":
+			out.Values[i] = ec._RuleDraft_sourceKey(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "targetLabel":
+			out.Values[i] = ec._RuleDraft_targetLabel(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "transform":
+			out.Values[i] = ec._RuleDraft_transform(ctx, field, obj)
+		case "required":
+			out.Values[i] = ec._RuleDraft_required(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
@@ -4145,6 +4787,20 @@ func (ec *executionContext) unmarshalNCreateTemplateInput2githubᚗcomᚋmmmtmi�
 	return res, graphql.ErrorOnPath(ctx, err)
 }
 
+func (ec *executionContext) marshalNDraftFromExcelPayload2githubᚗcomᚋmmmtmiᚋexcelᚑtemplateᚑmapperᚋgraphᚋmodelᚐDraftFromExcelPayload(ctx context.Context, sel ast.SelectionSet, v model.DraftFromExcelPayload) graphql.Marshaler {
+	return ec._DraftFromExcelPayload(ctx, sel, &v)
+}
+
+func (ec *executionContext) marshalNDraftFromExcelPayload2ᚖgithubᚗcomᚋmmmtmiᚋexcelᚑtemplateᚑmapperᚋgraphᚋmodelᚐDraftFromExcelPayload(ctx context.Context, sel ast.SelectionSet, v *model.DraftFromExcelPayload) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			graphql.AddErrorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._DraftFromExcelPayload(ctx, sel, v)
+}
+
 func (ec *executionContext) unmarshalNID2string(ctx context.Context, v any) (string, error) {
 	res, err := graphql.UnmarshalID(v)
 	return res, graphql.ErrorOnPath(ctx, err)
@@ -4235,6 +4891,60 @@ func (ec *executionContext) marshalNRule2ᚖgithubᚗcomᚋmmmtmiᚋexcelᚑtemp
 	return ec._Rule(ctx, sel, v)
 }
 
+func (ec *executionContext) marshalNRuleDraft2ᚕᚖgithubᚗcomᚋmmmtmiᚋexcelᚑtemplateᚑmapperᚋgraphᚋmodelᚐRuleDraftᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.RuleDraft) graphql.Marshaler {
+	ret := make(graphql.Array, len(v))
+	var wg sync.WaitGroup
+	isLen1 := len(v) == 1
+	if !isLen1 {
+		wg.Add(len(v))
+	}
+	for i := range v {
+		i := i
+		fc := &graphql.FieldContext{
+			Index:  &i,
+			Result: &v[i],
+		}
+		ctx := graphql.WithFieldContext(ctx, fc)
+		f := func(i int) {
+			defer func() {
+				if r := recover(); r != nil {
+					ec.Error(ctx, ec.Recover(ctx, r))
+					ret = nil
+				}
+			}()
+			if !isLen1 {
+				defer wg.Done()
+			}
+			ret[i] = ec.marshalNRuleDraft2ᚖgithubᚗcomᚋmmmtmiᚋexcelᚑtemplateᚑmapperᚋgraphᚋmodelᚐRuleDraft(ctx, sel, v[i])
+		}
+		if isLen1 {
+			f(i)
+		} else {
+			go f(i)
+		}
+
+	}
+	wg.Wait()
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
+}
+
+func (ec *executionContext) marshalNRuleDraft2ᚖgithubᚗcomᚋmmmtmiᚋexcelᚑtemplateᚑmapperᚋgraphᚋmodelᚐRuleDraft(ctx context.Context, sel ast.SelectionSet, v *model.RuleDraft) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			graphql.AddErrorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._RuleDraft(ctx, sel, v)
+}
+
 func (ec *executionContext) unmarshalNString2string(ctx context.Context, v any) (string, error) {
 	res, err := graphql.UnmarshalString(v)
 	return res, graphql.ErrorOnPath(ctx, err)
@@ -4249,6 +4959,66 @@ func (ec *executionContext) marshalNString2string(ctx context.Context, sel ast.S
 		}
 	}
 	return res
+}
+
+func (ec *executionContext) unmarshalNString2ᚕstringᚄ(ctx context.Context, v any) ([]string, error) {
+	var vSlice []any
+	vSlice = graphql.CoerceList(v)
+	var err error
+	res := make([]string, len(vSlice))
+	for i := range vSlice {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithIndex(i))
+		res[i], err = ec.unmarshalNString2string(ctx, vSlice[i])
+		if err != nil {
+			return nil, err
+		}
+	}
+	return res, nil
+}
+
+func (ec *executionContext) marshalNString2ᚕstringᚄ(ctx context.Context, sel ast.SelectionSet, v []string) graphql.Marshaler {
+	ret := make(graphql.Array, len(v))
+	for i := range v {
+		ret[i] = ec.marshalNString2string(ctx, sel, v[i])
+	}
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
+}
+
+func (ec *executionContext) unmarshalNString2ᚕᚕstringᚄ(ctx context.Context, v any) ([][]string, error) {
+	var vSlice []any
+	vSlice = graphql.CoerceList(v)
+	var err error
+	res := make([][]string, len(vSlice))
+	for i := range vSlice {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithIndex(i))
+		res[i], err = ec.unmarshalNString2ᚕstringᚄ(ctx, vSlice[i])
+		if err != nil {
+			return nil, err
+		}
+	}
+	return res, nil
+}
+
+func (ec *executionContext) marshalNString2ᚕᚕstringᚄ(ctx context.Context, sel ast.SelectionSet, v [][]string) graphql.Marshaler {
+	ret := make(graphql.Array, len(v))
+	for i := range v {
+		ret[i] = ec.marshalNString2ᚕstringᚄ(ctx, sel, v[i])
+	}
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
 }
 
 func (ec *executionContext) marshalNTemplate2githubᚗcomᚋmmmtmiᚋexcelᚑtemplateᚑmapperᚋgraphᚋmodelᚐTemplate(ctx context.Context, sel ast.SelectionSet, v model.Template) graphql.Marshaler {
@@ -4317,6 +5087,22 @@ func (ec *executionContext) unmarshalNUpdateRuleInput2githubᚗcomᚋmmmtmiᚋex
 func (ec *executionContext) unmarshalNUpdateTemplateInput2githubᚗcomᚋmmmtmiᚋexcelᚑtemplateᚑmapperᚋgraphᚋmodelᚐUpdateTemplateInput(ctx context.Context, v any) (model.UpdateTemplateInput, error) {
 	res, err := ec.unmarshalInputUpdateTemplateInput(ctx, v)
 	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) unmarshalNUpload2githubᚗcomᚋ99designsᚋgqlgenᚋgraphqlᚐUpload(ctx context.Context, v any) (graphql.Upload, error) {
+	res, err := graphql.UnmarshalUpload(v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalNUpload2githubᚗcomᚋ99designsᚋgqlgenᚋgraphqlᚐUpload(ctx context.Context, sel ast.SelectionSet, v graphql.Upload) graphql.Marshaler {
+	_ = sel
+	res := graphql.MarshalUpload(v)
+	if res == graphql.Null {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			graphql.AddErrorf(ctx, "the requested element is null which the schema does not allow")
+		}
+	}
+	return res
 }
 
 func (ec *executionContext) marshalN__Directive2githubᚗcomᚋ99designsᚋgqlgenᚋgraphqlᚋintrospectionᚐDirective(ctx context.Context, sel ast.SelectionSet, v introspection.Directive) graphql.Marshaler {

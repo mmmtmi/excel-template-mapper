@@ -7,40 +7,444 @@ package graph
 
 import (
 	"context"
+	"encoding/json"
+	"errors"
 	"fmt"
+	"io"
+	"os"
+	"path/filepath"
+	"strings"
+	"time"
 
+	"github.com/99designs/gqlgen/graphql"
+	"github.com/google/uuid"
 	"github.com/mmmtmi/excel-template-mapper/graph/model"
+	"github.com/mmmtmi/excel-template-mapper/internal/excel"
+	internalmodel "github.com/mmmtmi/excel-template-mapper/internal/model"
 	"github.com/mmmtmi/excel-template-mapper/internal/store/mysql"
+	excelize "github.com/xuri/excelize/v2"
 )
 
 // CreateTemplate is the resolver for the createTemplate field.
 func (r *mutationResolver) CreateTemplate(ctx context.Context, input model.CreateTemplateInput) (*model.Template, error) {
-	panic(fmt.Errorf("not implemented: CreateTemplate - createTemplate"))
+	// Edit by CODEX: minimal insert for PoC.
+	if r.DB == nil {
+		return nil, errors.New("DB not configured")
+	}
+	if strings.TrimSpace(input.Name) == "" {
+		return nil, errors.New("name is required")
+	}
+
+	now := time.Now()
+	tpl := &internalmodel.Template{
+		ID:           uuid.NewString(),
+		Name:         input.Name,
+		Target:       input.Name,
+		SheetName:    input.SheetName,
+		HeaderRow:    int(input.HeaderRow),
+		DataStartRow: int(input.DataStartRow),
+	}
+	if err := mysql.InsertTemplate(ctx, r.DB, tpl, now); err != nil {
+		return nil, err
+	}
+
+	createdAt := now.Format(time.RFC3339Nano)
+	updatedAt := createdAt
+	return &model.Template{
+		ID:           tpl.ID,
+		Name:         tpl.Name,
+		Target:       tpl.Target,
+		SheetName:    tpl.SheetName,
+		HeaderRow:    int32(tpl.HeaderRow),
+		DataStartRow: int32(tpl.DataStartRow),
+		Notes:        nil,
+		CreatedAt:    &createdAt,
+		UpdatedAt:    &updatedAt,
+	}, nil
 }
 
 // UpdateTemplate is the resolver for the updateTemplate field.
 func (r *mutationResolver) UpdateTemplate(ctx context.Context, id string, input model.UpdateTemplateInput) (*model.Template, error) {
-	panic(fmt.Errorf("not implemented: UpdateTemplate - updateTemplate"))
+	// Edit by CODEX: minimal update for PoC.
+	if r.DB == nil {
+		return nil, errors.New("DB not configured")
+	}
+	if strings.TrimSpace(id) == "" {
+		return nil, errors.New("id is required")
+	}
+
+	tpl, notes, createdAt, _, err := mysql.GetTemplateByID(ctx, r.DB, id)
+	if err != nil {
+		return nil, err
+	}
+
+	if input.Name != nil {
+		tpl.Name = *input.Name
+	}
+	if input.SheetName != nil {
+		tpl.SheetName = input.SheetName
+	}
+	if input.HeaderRow != nil {
+		tpl.HeaderRow = int(*input.HeaderRow)
+	}
+	if input.DataStartRow != nil {
+		tpl.DataStartRow = int(*input.DataStartRow)
+	}
+
+	now := time.Now()
+	if err := mysql.UpdateTemplate(ctx, r.DB, tpl, now); err != nil {
+		return nil, err
+	}
+
+	ca := createdAt.Format(time.RFC3339Nano)
+	ua := now.Format(time.RFC3339Nano)
+	return &model.Template{
+		ID:           tpl.ID,
+		Name:         tpl.Name,
+		Target:       tpl.Target,
+		SheetName:    tpl.SheetName,
+		HeaderRow:    int32(tpl.HeaderRow),
+		DataStartRow: int32(tpl.DataStartRow),
+		Notes:        notes,
+		CreatedAt:    &ca,
+		UpdatedAt:    &ua,
+	}, nil
 }
 
 // CreateRule is the resolver for the createRule field.
 func (r *mutationResolver) CreateRule(ctx context.Context, input model.CreateRuleInput) (*model.Rule, error) {
-	panic(fmt.Errorf("not implemented: CreateRule - createRule"))
+	// Edit by CODEX: minimal insert for PoC.
+	if r.DB == nil {
+		return nil, errors.New("DB not configured")
+	}
+	if strings.TrimSpace(input.TemplateID) == "" {
+		return nil, errors.New("templateId is required")
+	}
+	if strings.TrimSpace(input.SourceType) == "" {
+		return nil, errors.New("sourceType is required")
+	}
+	if strings.TrimSpace(input.SourceKey) == "" {
+		return nil, errors.New("sourceKey is required")
+	}
+	if strings.TrimSpace(input.TargetLabel) == "" {
+		return nil, errors.New("targetLabel is required")
+	}
+
+	now := time.Now()
+	ruleID := uuid.NewString()
+	targetID := uuid.NewString()
+	priority := 1
+	var transform *string
+	if input.Transform != nil {
+		if strings.TrimSpace(*input.Transform) != "" {
+			transform = input.Transform
+		}
+	}
+	rr := &mysql.RuleRow{
+		ID:          ruleID,
+		TemplateID:  input.TemplateID,
+		SourceType:  input.SourceType,
+		SourceKey:   input.SourceKey,
+		TargetID:    targetID,
+		TargetLabel: input.TargetLabel,
+		Transform:   transform,
+		Required:    input.Required,
+		Priority:    priority,
+	}
+	if err := mysql.InsertRule(ctx, r.DB, rr, now); err != nil {
+		return nil, err
+	}
+
+	createdAt := now.Format(time.RFC3339Nano)
+	updatedAt := createdAt
+	p := int32(priority)
+	return &model.Rule{
+		ID:           ruleID,
+		TemplateID:   input.TemplateID,
+		SourceType:   input.SourceType,
+		SourceKey:    input.SourceKey,
+		TargetID:     targetID,
+		TargetLabel:  input.TargetLabel,
+		CanonicalKey: nil,
+		Transform:    transform,
+		Required:     input.Required,
+		Priority:     &p,
+		Evidence:     nil,
+		CreatedAt:    createdAt,
+		UpdatedAt:    updatedAt,
+	}, nil
 }
 
 // UpdateRule is the resolver for the updateRule field.
 func (r *mutationResolver) UpdateRule(ctx context.Context, id string, input model.UpdateRuleInput) (*model.Rule, error) {
-	panic(fmt.Errorf("not implemented: UpdateRule - updateRule"))
+	// Edit by CODEX: minimal update for PoC.
+	if r.DB == nil {
+		return nil, errors.New("DB not configured")
+	}
+	if strings.TrimSpace(id) == "" {
+		return nil, errors.New("id is required")
+	}
+
+	rr, err := mysql.GetRuleByID(ctx, r.DB, id)
+	if err != nil {
+		return nil, err
+	}
+	if input.SourceType != nil {
+		rr.SourceType = *input.SourceType
+	}
+	if input.SourceKey != nil {
+		rr.SourceKey = *input.SourceKey
+	}
+	if input.TargetLabel != nil {
+		rr.TargetLabel = *input.TargetLabel
+	}
+	if input.Transform != nil {
+		if strings.TrimSpace(*input.Transform) == "" {
+			rr.Transform = nil
+		} else {
+			rr.Transform = input.Transform
+		}
+	}
+	if input.Required != nil {
+		rr.Required = *input.Required
+	}
+
+	now := time.Now()
+	if err := mysql.UpdateRule(ctx, r.DB, rr, now); err != nil {
+		return nil, err
+	}
+
+	p := int32(rr.Priority)
+	return &model.Rule{
+		ID:           rr.ID,
+		TemplateID:   rr.TemplateID,
+		SourceType:   rr.SourceType,
+		SourceKey:    rr.SourceKey,
+		TargetID:     rr.TargetID,
+		TargetLabel:  rr.TargetLabel,
+		CanonicalKey: rr.CanonicalKey,
+		Transform:    rr.Transform,
+		Required:     rr.Required,
+		Priority:     &p,
+		Evidence:     rr.Evidence,
+		CreatedAt:    rr.CreatedAt.Format(time.RFC3339Nano),
+		UpdatedAt:    now.Format(time.RFC3339Nano),
+	}, nil
+}
+
+// ProcessExcel is the resolver for the processExcel field.
+func (r *mutationResolver) ProcessExcel(ctx context.Context, templateName string, file graphql.Upload) (string, error) {
+	// Edit by CODEX: upload -> temp file -> Processor -> JSON string.
+	if r.Processor == nil {
+		return "", errors.New("processor not configured")
+	}
+	if strings.TrimSpace(templateName) == "" {
+		return "", errors.New("templateName is required")
+	}
+	if ext := strings.ToLower(filepath.Ext(file.Filename)); ext != "" && ext != ".xlsx" {
+		return "", fmt.Errorf("unsupported file extension: %s", ext)
+	}
+
+	tmp, err := os.CreateTemp("", "etm-*.xlsx")
+	if err != nil {
+		return "", err
+	}
+	defer func() { _ = os.Remove(tmp.Name()) }()
+	// Edit by CODEX: file.File is io.ReadSeeker; close only when supported.
+	if c, ok := file.File.(io.Closer); ok {
+		defer func() { _ = c.Close() }()
+	}
+
+	if _, err := io.Copy(tmp, file.File); err != nil {
+		return "", err
+	}
+	if err := tmp.Close(); err != nil {
+		return "", err
+	}
+
+	rows, err := r.Processor.ProcessWithTemplate(ctx, templateName, tmp.Name())
+	if err != nil {
+		return "", err
+	}
+	b, err := json.Marshal(rows)
+	if err != nil {
+		return "", err
+	}
+	return string(b), nil
+}
+
+// ProcessExcelOnly is the resolver for the processExcelOnly field.
+func (r *mutationResolver) ProcessExcelOnly(ctx context.Context, file graphql.Upload) (string, error) {
+	// Edit by CODEX: upload -> temp file -> Processor -> JSON string.
+	if r.Processor == nil {
+		return "", errors.New("processor not configured")
+	}
+	if ext := strings.ToLower(filepath.Ext(file.Filename)); ext != "" && ext != ".xlsx" {
+		return "", fmt.Errorf("unsupported file extension: %s", ext)
+	}
+
+	tmp, err := os.CreateTemp("", "etm-*.xlsx")
+	if err != nil {
+		return "", err
+	}
+	defer func() { _ = os.Remove(tmp.Name()) }()
+
+	// Edit by CODEX: file.File is io.ReadSeeker; close only when supported.
+	if c, ok := file.File.(io.Closer); ok {
+		defer func() { _ = c.Close() }()
+	}
+
+	if _, err := io.Copy(tmp, file.File); err != nil {
+		_ = tmp.Close()
+		return "", err
+	}
+	if err := tmp.Close(); err != nil {
+		return "", err
+	}
+
+	rows, err := r.Processor.ProcessExcelOnly(tmp.Name(), nil)
+	if err != nil {
+		return "", err
+	}
+	b, err := json.Marshal(rows)
+	if err != nil {
+		return "", err
+	}
+	return string(b), nil
+}
+
+// DraftRulesFromExcel is the resolver for the draftRulesFromExcel field.
+func (r *mutationResolver) DraftRulesFromExcel(ctx context.Context, file graphql.Upload) (*model.DraftFromExcelPayload, error) {
+	// Edit by CODEX: upload -> read headers -> return draft rules for UI.
+	if ext := strings.ToLower(filepath.Ext(file.Filename)); ext != "" && ext != ".xlsx" {
+		return nil, fmt.Errorf("unsupported file extension: %s", ext)
+	}
+
+	tmp, err := os.CreateTemp("", "etm-*.xlsx")
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = os.Remove(tmp.Name()) }()
+
+	// Edit by CODEX: file.File is io.ReadSeeker; close only when supported.
+	if c, ok := file.File.(io.Closer); ok {
+		defer func() { _ = c.Close() }()
+	}
+
+	if _, err := io.Copy(tmp, file.File); err != nil {
+		_ = tmp.Close()
+		return nil, err
+	}
+	if err := tmp.Close(); err != nil {
+		return nil, err
+	}
+
+	f, err := excelize.OpenFile(tmp.Name())
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = f.Close() }()
+
+	opt := excel.ReadOptions{
+		HeaderRow:    1,
+		DataStartRow: 2,
+		TrimHeader:   true,
+		SkipEmptyKey: true,
+	}
+	table, err := excel.ReadTable(f, opt)
+	if err != nil {
+		return nil, err
+	}
+
+	seen := make(map[string]bool, len(table.Headers))
+	out := make([]*model.RuleDraft, 0, len(table.Headers))
+	headers := []string{}
+	for _, h := range table.Headers {
+		h = strings.TrimSpace(h)
+		if h == "" {
+			continue
+		}
+		if seen[h] {
+			continue
+		}
+		headers = append(headers, h)
+		seen[h] = true
+		out = append(out, &model.RuleDraft{
+			SourceType:  "HEADER",
+			SourceKey:   h,
+			TargetLabel: h,
+			Transform:   nil,
+			Required:    false,
+		})
+	}
+
+	// Edit by CODEX: build sample rows (preview) in header order. Empty cell => "".
+	const maxPreviewRows = 5
+	n := len(table.Rows)
+	if n > maxPreviewRows {
+		n = maxPreviewRows
+	}
+	sampleRows := make([][]string, 0, n)
+	for i := 0; i < n; i++ {
+		row := table.Rows[i]
+		cells := make([]string, 0, len(headers))
+		for _, h := range headers {
+			val, ok := row.Values[h]
+			if !ok || val == nil {
+				cells = append(cells, "")
+				continue
+			}
+			if s, ok := val.(string); ok {
+				cells = append(cells, s)
+				continue
+			}
+			cells = append(cells, fmt.Sprint(val))
+		}
+		sampleRows = append(sampleRows, cells)
+	}
+
+	outPayload := &model.DraftFromExcelPayload{
+		Headers:    headers,
+		SampleRows: sampleRows,
+		DraftRules: out,
+	}
+
+	return outPayload, nil
 }
 
 // Templates is the resolver for the templates field.
 func (r *queryResolver) Templates(ctx context.Context) ([]*model.Template, error) {
-	panic(fmt.Errorf("not implemented: Templates - templates"))
+	// Edit by CODEX: list templates for frontend selector.
+	if r.DB == nil {
+		return nil, errors.New("DB not configured")
+	}
+
+	repo := &mysql.TemplateRepository{DB: r.DB}
+	templates, err := repo.ListTemplates(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	out := make([]*model.Template, 0, len(templates))
+	for _, tpl := range templates {
+		out = append(out, &model.Template{
+			ID:           tpl.ID,
+			Name:         tpl.Name,
+			Target:       tpl.Target,
+			SheetName:    tpl.SheetName,
+			HeaderRow:    int32(tpl.HeaderRow),
+			DataStartRow: int32(tpl.DataStartRow),
+			Notes:        nil,
+			CreatedAt:    nil,
+			UpdatedAt:    nil,
+		})
+	}
+
+	return out, nil
 }
 
 // Template is the resolver for the template field.
 func (r *queryResolver) Template(ctx context.Context, name string) (*model.Template, error) {
-
 	tpl, err := mysql.GetTemplateByName(ctx, r.DB, name)
 	if err != nil {
 		return nil, err
@@ -56,12 +460,43 @@ func (r *queryResolver) Template(ctx context.Context, name string) (*model.Templ
 	}
 
 	return out, err
-
 }
 
 // Rules is the resolver for the rules field.
 func (r *queryResolver) Rules(ctx context.Context, templateID string) ([]*model.Rule, error) {
-	panic(fmt.Errorf("not implemented: Rules - rules"))
+	// Edit by CODEX: list rules for template inspector/editor.
+	if r.DB == nil {
+		return nil, errors.New("DB not configured")
+	}
+	if strings.TrimSpace(templateID) == "" {
+		return nil, errors.New("templateId is required")
+	}
+
+	rules, err := mysql.ListRuleRowsByTemplateID(ctx, r.DB, templateID)
+	if err != nil {
+		return nil, err
+	}
+
+	out := make([]*model.Rule, 0, len(rules))
+	for _, rr := range rules {
+		p := int32(rr.Priority)
+		out = append(out, &model.Rule{
+			ID:           rr.ID,
+			TemplateID:   rr.TemplateID,
+			SourceType:   rr.SourceType,
+			SourceKey:    rr.SourceKey,
+			TargetID:     rr.TargetID,
+			TargetLabel:  rr.TargetLabel,
+			CanonicalKey: rr.CanonicalKey,
+			Transform:    rr.Transform,
+			Required:     rr.Required,
+			Priority:     &p,
+			Evidence:     rr.Evidence,
+			CreatedAt:    rr.CreatedAt.Format(time.RFC3339Nano),
+			UpdatedAt:    rr.UpdatedAt.Format(time.RFC3339Nano),
+		})
+	}
+	return out, nil
 }
 
 // Mutation returns MutationResolver implementation.

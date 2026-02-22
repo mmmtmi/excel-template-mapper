@@ -304,9 +304,38 @@ erDiagram
 ## Non-goals（本PoCで扱わないこと）
 
 - AI推論ロジックの実装（将来拡張）
-- Web UI
 - 複雑な変換DSL
 - 大規模バッチ最適化
+
+---
+
+## Reactフロントエンド（PoC）
+
+`frontend/` に、GraphQL Upload対応のReact（Vite）UIを追加しています。
+
+1. APIサーバー起動
+   ```bash
+   go run cmd/api/main.go
+   ```
+2. フロントエンド起動
+   ```bash
+   cd frontend
+   npm install
+   npm run dev
+   ```
+3. ブラウザで `http://localhost:5173` を開く
+
+必要なら `.env` でGraphQLエンドポイントを変更できます。
+
+```bash
+VITE_GRAPHQL_ENDPOINT=http://localhost:8080/query
+```
+
+画面で使える主なフロー:
+- `draftRulesFromExcel`: ヘッダ・サンプル行・ルール草案の確認
+- `createTemplate` + `createRule`: 草案編集後の保存
+- `processExcelOnly`: テンプレートなし変換
+- `processExcel`: テンプレート適用変換
 
 ---
 
