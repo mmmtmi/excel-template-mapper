@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Lesson 1 - サーバーを起動する</title>
+  <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+  <div class="wrap">
+    <span class="tag">Lesson 1</span>
+    <h1>サーバーを起動する</h1>
+    <p class="muted">この回は起動そのものより、起動時に何が初期化されるかを把握することが目的です。</p>
+
+    <div class="card">
+      <h2>この回のゴール</h2>
+      <ul>
+        <li>MySQL と API サーバーを起動できる</li>
+        <li><code>cmd/api/main.go</code> が何を初期化しているか説明できる</li>
+        <li>GraphQL Playground に到達する HTTP 経路を説明できる</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <h2>実行手順</h2>
+      <pre><code>docker compose up -d
+docker compose exec -T mysql mysql -uapp -papp excel_template_mapper &lt; db/migrations/001_init.up.sql
+go run cmd/api/main.go</code></pre>
+      <p>ブラウザでは <code>http://localhost:8080</code> を開きます。</p>
+    </div>
+
+    <div class="card">
+      <h2>起動確認</h2>
+      <pre><code>docker compose ps
+docker compose exec mysql mysql -uapp -papp excel_template_mapper -e "SHOW TABLES;"</code></pre>
+      <ul>
+        <li><code>mysql</code> が <code>Up</code> なら DB 起動成功</li>
+        <li><code>mapping_templates</code> と <code>mapping_rules</code> が見えれば migration 成功</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <h2>読むファイル</h2>
+      <ol>
+        <li><code>cmd/api/main.go</code></li>
+        <li><code>internal/dbconn/dbconn.go</code></li>
+        <li><code>graph/resolver.go</code></li>
+      </ol>
+    </div>
+
+    <div class="card">
+      <h2>読むポイント</h2>
+      <ul>
+        <li><code>LoadMySQLConfigFromEnv(".env")</code>: どの env を読むか</li>
+        <li><code>dbconn.Open</code>: DB 接続の確立</li>
+        <li><code>service.NewProcessor</code>: どこで service を組み立てるか</li>
+        <li><code>graph.NewExecutableSchema</code>: gqlgen の schema をどこで生成するか</li>
+        <li><code>playground.Handler</code> と <code>/query</code>: ブラウザ画面と API エンドポイントの対応</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <h2>考える問い</h2>
+      <ol>
+        <li>なぜ <code>main.go</code> は SQL を直接書かず、repository と processor を組み立てるだけなのか</li>
+        <li>なぜ GraphQL Playground の URL と実際の Query URL が分かれているのか</li>
+        <li>なぜ DB 接続は起動時に 1 回だけ作る設計が多いのか</li>
+      </ol>
+    </div>
+
+    <div class="card">
+      <h2>確認用メモ</h2>
+      <p>この回が終わった時点で、次の説明ができれば十分です。</p>
+      <pre><code>main.go
+  -> .env を読む
+  -> DB 接続を作る
+  -> repository を作る
+  -> processor を作る
+  -> resolver に渡す
+  -> GraphQL handler を起動する</code></pre>
+    </div>
+
+    <p class="back"><a href="./index.html">← 目次に戻る</a></p>
+  </div>
+</body>
+</html>

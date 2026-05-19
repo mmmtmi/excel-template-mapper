@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Lesson 6 - Excel Reader を読む</title>
+  <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+  <div class="wrap">
+    <span class="tag">Lesson 6</span>
+    <h1>Excel Reader を読む</h1>
+    <p class="muted">この回では Excel をどのように「表」として読み替えているかを確認します。</p>
+
+    <div class="card">
+      <h2>この回のゴール</h2>
+      <ul>
+        <li><code>ReadOptions</code> の意味を理解する</li>
+        <li>header row と data start row の違いを説明できる</li>
+        <li>Excel の生データを row/column の辞書へ変換する流れを追える</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <h2>読むファイル</h2>
+      <ol>
+        <li><code>internal/excel/reader.go</code></li>
+        <li><code>internal/excel/Book1.xlsx</code></li>
+      </ol>
+    </div>
+
+    <div class="card">
+      <h2>理解すべきこと</h2>
+      <ul>
+        <li>どのシートを読むか</li>
+        <li>header row をどう抽出するか</li>
+        <li>空 header をどう扱うか</li>
+        <li>各行を <code>map[header]value</code> にする理由</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <h2>Processor との接続</h2>
+      <p><code>Processor</code> は reader から「整形済みの表データ」を受け取ります。つまり reader の責務は Excel ファイルの物理構造を隠蔽することです。</p>
+      <pre><code>Excel file
+  -> reader
+  -> headers + rows
+  -> processor
+  -> rules を適用</code></pre>
+    </div>
+
+    <div class="card">
+      <h2>考える問い</h2>
+      <ol>
+        <li>紙の帳票に近い Excel を JSON 化する時、なぜ header ベースの読み方が有効なのか</li>
+        <li>複数の表領域が 1 シートにある場合、現状の設計はどこで破綻するか</li>
+        <li>CELL type を追加するなら reader と processor のどちらへ責務を置くべきか</li>
+      </ol>
+    </div>
+
+    <p class="back"><a href="./index.html">← 目次に戻る</a></p>
+  </div>
+</body>
+</html>

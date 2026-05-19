@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Lesson 7 - GraphQL で一連の流れを再現する</title>
+  <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+  <div class="wrap">
+    <span class="tag">Lesson 7</span>
+    <h1>GraphQL で一連の流れを再現する</h1>
+    <p class="muted">この回では schema、resolver、repository、processor の理解をつないで、実際に 1 本の変換フローを通します。</p>
+
+    <div class="card">
+      <h2>この回のゴール</h2>
+      <ul>
+        <li>Template を作成できる</li>
+        <li>Rule を追加できる</li>
+        <li>Excel 変換 Mutation の位置づけを理解できる</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <h2>手順 1: Template を作る</h2>
+      <pre><code>mutation {
+  createTemplate(input: {
+    name: "report_v1"
+    headerRow: 1
+    dataStartRow: 2
+  }) {
+    id
+    name
+  }
+}</code></pre>
+    </div>
+
+    <div class="card">
+      <h2>手順 2: templateId を取得する</h2>
+      <pre><code>query {
+  templates {
+    id
+    name
+  }
+}</code></pre>
+    </div>
+
+    <div class="card">
+      <h2>手順 3: Rule を作る</h2>
+      <pre><code>mutation {
+  createRule(input: {
+    templateId: "取得した templateId"
+    sourceKey: "カスタマID"
+    sourceType: "HEADER"
+    targetLabel: "顧客ID"
+    required: true
+  }) {
+    id
+    sourceKey
+    targetLabel
+  }
+}</code></pre>
+    </div>
+
+    <div class="card">
+      <h2>手順 4: 状態を確認する</h2>
+      <pre><code>query {
+  rules(templateId: "取得した templateId") {
+    sourceType
+    sourceKey
+    targetLabel
+    required
+  }
+}</code></pre>
+    </div>
+
+    <div class="card">
+      <h2>ここで理解すべきこと</h2>
+      <ul>
+        <li>Template は読み取り方法を定義する</li>
+        <li>Rule は列と出力キーの対応を定義する</li>
+        <li>Processor は両方を受けて Excel を JSON に変換する</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <h2>考える問い</h2>
+      <ol>
+        <li>なぜ Template と Rule を別テーブルにしているのか</li>
+        <li>Rule に priority があるのはどんな将来要件を見越しているのか</li>
+        <li>Mutation で一括登録 API を用意したくなったら、どこが複雑になるか</li>
+      </ol>
+    </div>
+
+    <p class="back"><a href="./index.html">← 目次に戻る</a></p>
+  </div>
+</body>
+</html>

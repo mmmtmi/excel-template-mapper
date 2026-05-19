@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Lesson 4 - Repository と DB を読む</title>
+  <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+  <div class="wrap">
+    <span class="tag">Lesson 4</span>
+    <h1>Repository と DB を読む</h1>
+    <p class="muted">この回は MySQL とのやり取りと、repository 層を置く意味を理解する回です。</p>
+
+    <div class="card">
+      <h2>この回のゴール</h2>
+      <ul>
+        <li>repository の役割を説明できる</li>
+        <li>Template と Rule の取得・保存 SQL を追える</li>
+        <li>service 層が repository interface を受ける理由を説明できる</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <h2>読むファイル</h2>
+      <ol>
+        <li><code>internal/store/mysql/template_repo.go</code></li>
+        <li><code>internal/store/mysql/repos.go</code></li>
+        <li><code>internal/store/mysql/mutations.go</code></li>
+        <li><code>db/migrations/001_init.up.sql</code></li>
+      </ol>
+    </div>
+
+    <div class="card">
+      <h2>見る順番</h2>
+      <ol>
+        <li>migration でテーブル定義を確認する</li>
+        <li>repository の read 系メソッドを見る</li>
+        <li>mutation の write 系メソッドを見る</li>
+        <li>resolver からどの関数が呼ばれているか戻って確認する</li>
+      </ol>
+    </div>
+
+    <div class="card">
+      <h2>注目ポイント</h2>
+      <ul>
+        <li><code>mapping_templates</code> と <code>mapping_rules</code> の主なカラム</li>
+        <li><code>GetTemplateByName</code> が service にとってなぜ重要か</li>
+        <li><code>ListRulesByTemplateID</code> が processor にどう使われるか</li>
+        <li><code>InsertTemplate</code> / <code>InsertRule</code> の責務が resolver に漏れていないか</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <h2>設計観点</h2>
+      <p>このプロジェクトの service は具体的な MySQL 実装ではなく interface を受けます。これにより、将来は memory 実装や mock 実装へ差し替えられます。</p>
+      <pre><code>service
+  -> TemplateRepo interface
+  -> RuleRepo interface
+
+mysql package
+  -> その interface を満たす具体実装</code></pre>
+    </div>
+
+    <div class="card">
+      <h2>SQL で直接確認する</h2>
+      <pre><code>docker compose exec mysql mysql -uapp -papp excel_template_mapper -e "SELECT id,name,target,header_row,data_start_row FROM mapping_templates;"
+docker compose exec mysql mysql -uapp -papp excel_template_mapper -e "SELECT id,template_id,source_type,source_key,target_label,required FROM mapping_rules;"</code></pre>
+    </div>
+
+    <div class="card">
+      <h2>考える問い</h2>
+      <ol>
+        <li>なぜ service が <code>*sql.DB</code> を直接持たず repository interface を受けているのか</li>
+        <li>Rule が増えてきたとき、N+1 問題はどこで起きうるか</li>
+        <li>Transaction が必要になる処理は今後どこに現れそうか</li>
+      </ol>
+    </div>
+
+    <p class="back"><a href="./index.html">← 目次に戻る</a></p>
+  </div>
+</body>
+</html>

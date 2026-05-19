@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Lesson 3 - Resolver を読む</title>
+  <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+  <div class="wrap">
+    <span class="tag">Lesson 3</span>
+    <h1>Resolver を読む</h1>
+    <p class="muted">この回では schema で宣言したフィールドが、どの Go 関数で実装されているかを追います。</p>
+
+    <div class="card">
+      <h2>この回のゴール</h2>
+      <ul>
+        <li>Resolver の役割を説明できる</li>
+        <li>入力バリデーション、service 呼び出し、レスポンス整形の境界を説明できる</li>
+        <li>Mutation 実装の読み方を身につける</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <h2>読むファイル</h2>
+      <ol>
+        <li><code>graph/schema.resolvers.go</code></li>
+        <li><code>graph/resolver.go</code></li>
+        <li><code>graph/generated.go</code></li>
+      </ol>
+    </div>
+
+    <div class="card">
+      <h2>重点的に読む関数</h2>
+      <ul>
+        <li><code>CreateTemplate</code></li>
+        <li><code>UpdateTemplate</code></li>
+        <li><code>CreateRule</code></li>
+        <li><code>ProcessExcel</code></li>
+        <li><code>ProcessExcelOnly</code></li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <h2>Resolver の責務</h2>
+      <pre><code>GraphQL input
+  -> 必須値チェック
+  -> 必要なら Upload を一時ファイルへ保存
+  -> service / repository を呼ぶ
+  -> GraphQL の型へ詰め直して返す</code></pre>
+      <p>ここに「変換ロジックそのもの」を書き込みすぎると、resolver が肥大化します。</p>
+    </div>
+
+    <div class="card">
+      <h2>具体的に見る観点</h2>
+      <ol>
+        <li>なぜ <code>strings.TrimSpace</code> によるバリデーションを resolver で行っているか</li>
+        <li>なぜ <code>uuid.NewString()</code> を resolver 側で採番しているか</li>
+        <li>なぜ Upload をそのまま service に渡さず、一時ファイルへ保存しているか</li>
+        <li>なぜ GraphQL の model と internal model が分かれているか</li>
+      </ol>
+    </div>
+
+    <div class="card">
+      <h2>穴埋め確認</h2>
+      <pre><code>// CreateTemplate の要点
+if strings.TrimSpace(input.Name) == "" {
+  return nil, errors.New("_____ is required")
+}
+
+tpl := &internalmodel.Template{
+  ID:     uuid.NewString(),
+  Name:   input.Name,
+  Target: _____,
+}
+
+if err := mysql._____(ctx, r.DB, tpl, now); err != nil {
+  return nil, err
+}</code></pre>
+      <p>答えは [lesson2.md](/home/right/dev/excel-template-mapper/docs/answers/lesson2.md) にあります。</p>
+    </div>
+
+    <div class="card">
+      <h2>考える問い</h2>
+      <ol>
+        <li>resolver で DB アクセスを直接完結させる場合の問題点は何か</li>
+        <li>Mutation ごとに validation の重複が出てきたら、どこへ寄せるべきか</li>
+        <li><code>ProcessExcel</code> が返り値を <code>String!</code> にしている設計は今後どう改善できるか</li>
+      </ol>
+    </div>
+
+    <p class="back"><a href="./index.html">← 目次に戻る</a></p>
+  </div>
+</body>
+</html>

@@ -12,7 +12,7 @@ import (
 	"github.com/joho/godotenv"
 )
 
-// LoadMySQLConfigFromEnv loads .env (optional) and builds a mysql.Config from env vars.
+// LoadMySQLConfigFromEnv loads .env when present and builds a mysql.Config from env vars.
 //
 // Required env:
 //   - SQL_USER
@@ -24,9 +24,10 @@ import (
 //   - SQL_NET (defaults to tcp). For backward compatibility, SQL_NST is also accepted.
 func LoadMySQLConfigFromEnv(dotenvPath string) (mysql.Config, error) {
 	if dotenvPath != "" {
-		// Make .env behavior explicit: if you pass a path, it should exist.
 		if err := godotenv.Load(dotenvPath); err != nil {
-			return mysql.Config{}, fmt.Errorf("load env file %q: %w", dotenvPath, err)
+			if !os.IsNotExist(err) {
+				return mysql.Config{}, fmt.Errorf("load env file %q: %w", dotenvPath, err)
+			}
 		}
 	}
 

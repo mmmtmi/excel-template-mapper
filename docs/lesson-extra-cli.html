@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>おまけ - CLI版</title>
+  <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+  <div class="wrap">
+    <span class="tag">Optional</span>
+    <h1>おまけ: CLI版</h1>
+    <p class="muted">この回では GraphQL を通さず、同じ processor を CLI から実行する経路を比較します。</p>
+
+    <div class="card">
+      <h2>この回のゴール</h2>
+      <ul>
+        <li>CLI と API が同じ業務ロジックへ到達することを確認する</li>
+        <li>入口が違っても service 層を共有できる理由を説明できる</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <h2>実行コマンド</h2>
+      <pre><code>go run cmd/etm/main.go --template demo_v1 internal/excel/Book1.xlsx</code></pre>
+    </div>
+
+    <div class="card">
+      <h2>読むファイル</h2>
+      <ol>
+        <li><code>cmd/etm/main.go</code></li>
+        <li><code>internal/service/processor.go</code></li>
+      </ol>
+    </div>
+
+    <div class="card">
+      <h2>比較ポイント</h2>
+      <ul>
+        <li>GraphQL 版は resolver が入口になる</li>
+        <li>CLI 版は command parsing が入口になる</li>
+        <li>どちらも最終的には processor に処理を委譲する</li>
+      </ul>
+    </div>
+
+    <p class="back"><a href="./index.html">← 目次に戻る</a></p>
+  </div>
+</body>
+</html>

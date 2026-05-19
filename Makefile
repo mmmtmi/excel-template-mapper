@@ -4,8 +4,20 @@ DB_NAME = excel_template_mapper
 DB_USER = app
 DB_PASS = app
 
+up:
+	$(COMPOSE) up --build
+
+down:
+	$(COMPOSE) down
+
+logs:
+	$(COMPOSE) logs -f
+
+ps:
+	$(COMPOSE) ps
+
 db-up:
-	$(COMPOSE) up -d
+	$(COMPOSE) up -d mysql
 
 db-down:
 	$(COMPOSE) down

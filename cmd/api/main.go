@@ -4,6 +4,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/99designs/gqlgen/graphql/handler"
@@ -61,13 +62,13 @@ func main() {
 		Cache: lru.New[string](100),
 	})
 
+	allowedOrigins := loadAllowedOrigins()
+
 	http.Handle("/", playground.Handler("GraphQL playground", "/query"))
-	// Edit by CODEX: apply request body limit (includes multipart metadata).
 	const maxUpload = 7 << 20 // 7MiB
 	http.Handle("/query", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// Edit by CODEX: CORS for local React dev servers.
 		origin := r.Header.Get("Origin")
-		if origin == "http://localhost:5173" || origin == "http://127.0.0.1:5173" {
+		if allowedOrigins[origin] {
 			w.Header().Set("Access-Control-Allow-Origin", origin)
 			w.Header().Set("Vary", "Origin")
 		}
@@ -95,4 +96,24 @@ func main() {
 		IdleTimeout:       60 * time.Second,
 	}
 	log.Fatal(httpSrv.ListenAndServe())
+}
+
+func loadAllowedOrigins() map[string]bool {
+	raw := os.Getenv("FRONTEND_ORIGINS")
+	if raw == "" {
+		frontendPort := os.Getenv("FRONTEND_PORT")
+		if frontendPort == "" {
+			frontendPort = "5173"
+		}
+		raw = "http://localhost:" + frontendPort + ",http://127.0.0.1:" + frontendPort
+	}
+
+	out := make(map[string]bool)
+	for _, part := range strings.Split(raw, ",") {
+		origin := strings.TrimSpace(part)
+		if origin != "" {
+			out[origin] = true
+		}
+	}
+	return out
 }

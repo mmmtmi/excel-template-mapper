@@ -313,22 +313,49 @@ erDiagram
 
 `frontend/` に、GraphQL Upload対応のReact（Vite）UIを追加しています。
 
-1. APIサーバー起動
+通常はDocker ComposeでDB、migration、API、フロントエンドをまとめて起動します。
+
+```bash
+cp .env.sample .env
+make up
+```
+
+起動後:
+- フロントエンド: `http://localhost:5173`
+- GraphQL Playground: `http://localhost:8080`
+
+停止:
+
+```bash
+make down
+```
+
+手動で起動する場合:
+
+1. DB起動とmigration
+   ```bash
+   make db-up
+   make migrate-up
+   ```
+2. APIサーバー起動
    ```bash
    go run cmd/api/main.go
    ```
-2. フロントエンド起動
+3. フロントエンド起動
    ```bash
    cd frontend
    npm install
    npm run dev
    ```
-3. ブラウザで `http://localhost:5173` を開く
+4. ブラウザで `http://localhost:5173` を開く
 
-必要なら `.env` でGraphQLエンドポイントを変更できます。
+必要なら `.env` でポートやGraphQLエンドポイントを変更できます。
 
 ```bash
+PORT=8080
+FRONTEND_PORT=5173
 VITE_GRAPHQL_ENDPOINT=http://localhost:8080/query
+FRONTEND_ORIGINS=http://localhost:5173,http://127.0.0.1:5173
 ```
 
 画面で使える主なフロー:

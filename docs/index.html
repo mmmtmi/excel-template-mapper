@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>excel-template-mapper 教材</title>
+  <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+  <div class="wrap">
+    <span class="tag">Go + GraphQL 深掘り</span>
+    <h1>excel-template-mapper 教材</h1>
+    <p class="muted">
+      対象: Go の基礎を理解し、簡単な Todo アプリなら自力で作れる人。
+      目標: GraphQL サーバーの構成、Resolver と Service の責務分離、Excel から JSON へ変換するロジックを、時間制限なしで順に理解する。
+    </p>
+
+    <div class="card">
+      <h2>教材で使うリポジトリ</h2>
+      <p><a href="https://github.com/mmmtmi/excel-template-mapper" target="_blank" rel="noreferrer">https://github.com/mmmtmi/excel-template-mapper</a></p>
+      <p>コード全体を確認したい時、GitHub 上で差分や履歴を見たい時はここを参照します。</p>
+    </div>
+
+    <div class="card">
+      <h2>この教材の前提</h2>
+      <ul>
+        <li>環境一式は Clone または配布ZIPから用意する</li>
+        <li>Go の文法、構造体、interface、error handling は理解している前提で進む</li>
+        <li>GraphQL は未経験でもよいが、HTTP API の基本は知っている前提で進む</li>
+        <li>時間制限は設けない。理解できるまで読み、動かし、戻って確認する</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <h2>進め方</h2>
+      <ol>
+        <li>解説を読む</li>
+        <li>実際のコードを読む</li>
+        <li>再度解説で整理する</li>
+        <li>最後に改善案を <code>.md</code> にまとめ、PR 形式で提案し、可能なら実装まで進む</li>
+      </ol>
+      <p>各レッスンは「概念の解説 -> 該当コードを読む -> 再度整理する」の順で進めます。読む前に概念を説明し、読んだ後に設計意図を確認する流れを意識します。</p>
+    </div>
+
+    <h2>レッスン一覧</h2>
+    <div class="grid">
+      <div class="lesson">
+        <h3><a href="./lesson0.html">Lesson 0: 準備する</a></h3>
+        <p>環境構築、`.env`、生成コマンド、開発前提をそろえる。</p>
+      </div>
+      <div class="lesson">
+        <h3><a href="./lesson1.html">Lesson 1: サーバーを起動する</a></h3>
+        <p>Docker と Go で API を起動し、入口を確認する。</p>
+      </div>
+      <div class="lesson">
+        <h3><a href="./lesson2.html">Lesson 2: GraphQL とは何か</a></h3>
+        <p>REST との違い、schema、Query、Mutation、型システムを整理する。</p>
+      </div>
+      <div class="lesson">
+        <h3><a href="./lesson3.html">Lesson 3: Resolver を読む</a></h3>
+        <p>GraphQL から Go の処理へ流れる経路を追う。</p>
+      </div>
+      <div class="lesson">
+        <h3><a href="./lesson4.html">Lesson 4: Repository と DB を読む</a></h3>
+        <p>MySQL への保存・取得処理と責務分離を理解する。</p>
+      </div>
+      <div class="lesson">
+        <h3><a href="./lesson5.html">Lesson 5: Processor を読む</a></h3>
+        <p>テンプレートとルールをどう適用するかを追う。</p>
+      </div>
+      <div class="lesson">
+        <h3><a href="./lesson6.html">Lesson 6: Excel Reader を読む</a></h3>
+        <p>Excel を表データへ変換する部分を理解する。</p>
+      </div>
+      <div class="lesson">
+        <h3><a href="./lesson7.html">Lesson 7: GraphQL で一連の流れを再現する</a></h3>
+        <p>Template 作成から Rule 作成、変換実行までを通す。</p>
+      </div>
+      <div class="lesson">
+        <h3><a href="./lesson8.html">Lesson 8: 拡張とテストを考える</a></h3>
+        <p>改善候補を整理し、提案書の材料を作る。</p>
+      </div>
+      <div class="lesson">
+        <h3><a href="./lesson9.html">Lesson 9: 改善案を提案し、実装する</a></h3>
+        <p><code>.md</code> にまとめて PR として提案し、実装計画と実装着手まで進める。</p>
+      </div>
+      <div class="lesson">
+        <h3><a href="./lesson-extra-cli.html">おまけ: CLI版</a></h3>
+        <p>同じロジックを CLI から実行する経路を比較する。</p>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

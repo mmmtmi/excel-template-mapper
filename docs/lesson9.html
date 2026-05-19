@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Lesson 9 - 改善案を提案し、実装する</title>
+  <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+  <div class="wrap">
+    <span class="tag">Lesson 9</span>
+    <h1>改善案を提案し、実装する</h1>
+    <p class="muted">この回は最終課題です。改善案を Markdown にまとめ、PR 形式で提案し、実際に 1 つ選んで実装まで進みます。</p>
+
+    <div class="card">
+      <h2>この回のゴール</h2>
+      <ul>
+        <li>改善案を第三者がレビューしやすい形で説明できる</li>
+        <li>1 つの改善を実装計画へ落とせる</li>
+        <li>可能なら実装、テスト、確認まで完了できる</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <h2>ステップ 1: 提案書を作る</h2>
+      <p>Lesson 8 で作った案の中から、優先度が高く、効果が説明しやすいものを 1 つ選びます。</p>
+      <p>提案書は Markdown で作成します。たとえば <code>docs/proposals/add-trim-upper.md</code> のような場所に置きます。</p>
+      <pre><code>例:
+- transform を増やしやすい構造へ変更する
+- processExcel の返り値を GraphQL 的に自然な型へ変える
+- CELL sourceType を最低限サポートする</code></pre>
+    </div>
+
+    <div class="card">
+      <h2>ステップ 2: PR 用の説明を書く</h2>
+      <p>提案書ができたら、次はその内容をそのまま PR 説明へ流用できる形に整えます。</p>
+      <pre><code>1. この PR で解決したい問題
+2. 変更内容
+3. 影響範囲
+4. 確認方法
+5. 未対応の課題</code></pre>
+    </div>
+
+    <div class="card">
+      <h2>ステップ 3: 実装計画を書く</h2>
+      <pre><code>1. どのファイルを変えるか
+2. 追加するテストは何か
+3. 既存挙動への影響は何か
+4. どう確認するか</code></pre>
+    </div>
+
+    <div class="card">
+      <h2>ステップ 4: 実装する</h2>
+      <ul>
+        <li>まず小さく変更する</li>
+        <li><code>git diff</code> で差分を確認する</li>
+        <li><code>go test ./...</code> で回帰がないか確認する</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <h2>ステップ 5: 実装後レビュー</h2>
+      <ol>
+        <li>変更前より何が良くなったか</li>
+        <li>まだ残っている課題は何か</li>
+        <li>次に着手するなら何か</li>
+      </ol>
+    </div>
+
+    <div class="card">
+      <h2>提出イメージ</h2>
+      <ul>
+        <li><code>docs/proposals/xxx.md</code>: 改善提案書</li>
+        <li>コード差分: 実際の実装</li>
+        <li>PR 説明: 提案書を要約して記載</li>
+      </ul>
+      <p>この形にすると、レビュー側は「提案」と「実装」を分けて確認できます。</p>
+    </div>
+
+    <div class="card">
+      <h2>この教材の最終到達点</h2>
+      <p>コードを読めるだけでなく、改善余地を見つけ、提案書に整理し、レビュー可能な形で実装まで進めるところまで到達することがこの教材の最終目標です。</p>
+    </div>
+
+    <p class="back"><a href="./index.html">← 目次に戻る</a></p>
+  </div>
+</body>
+</html>

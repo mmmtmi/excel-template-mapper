@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Lesson 8 - 改善案を設計する</title>
+  <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+  <div class="wrap">
+    <span class="tag">Lesson 8</span>
+    <h1>改善案を設計する</h1>
+    <p class="muted">この回ではコードを読み終えた前提で、改善余地を整理し、最終的に <code>.md</code> へ落とし込める形まで具体化します。</p>
+
+    <div class="card">
+      <h2>この回のゴール</h2>
+      <ul>
+        <li>現状実装の強みと弱みを整理できる</li>
+        <li>改善候補を複数出せる</li>
+        <li>改善案を <code>.md</code> 提案書の形にまとめられる</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <h2>解説 1: 改善案の出し方</h2>
+      <p>実務では「気になる点を挙げる」だけでは不十分です。改善対象、理由、効果、実装コストをセットで説明できる必要があります。</p>
+      <p>さらに GitHub でレビューしてもらう前提なら、第三者が読んで判断できる文書になっていることが重要です。</p>
+      <pre><code>改善対象
+  -> 現状の問題
+  -> どう直すか
+  -> 何が良くなるか
+  -> どの程度の作業量か</code></pre>
+    </div>
+
+    <div class="card">
+      <h2>読む 1: 改善候補を洗い出す</h2>
+      <ul>
+        <li><code>processor.go</code>: transform の拡張性</li>
+        <li><code>reader.go</code>: 複数表領域への弱さ</li>
+        <li><code>schema.resolvers.go</code>: resolver の肥大化</li>
+        <li><code>schema.graphqls</code>: JSON 文字列返却の扱い</li>
+        <li><code>internal/store/mysql</code>: transaction 境界の不足</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <h2>解説 2: 実装しやすい改善と難しい改善</h2>
+      <ul>
+        <li>実装しやすい: transform の追加、GraphQL Query の追加、エラーメッセージ改善</li>
+        <li>中規模: CELL type の追加、戻り値型の整理、テスト追加</li>
+        <li>重い: 複数表領域対応、AI によるテンプレート推論、複雑な transform DSL</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <h2>読む 2: 改善の優先順位を決める</h2>
+      <p>候補を出したら、次は優先順位を付けます。判断軸を持たないと、思いつきの提案で終わります。</p>
+      <ul>
+        <li>学習効果が高いか</li>
+        <li>既存設計への理解が深まるか</li>
+        <li>実装規模が適切か</li>
+        <li>レビューしやすい差分になるか</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <h2>読む 3: テスト観点を整理する</h2>
+      <pre><code>go test ./...</code></pre>
+      <ol>
+        <li><code>internal/service/processor_test.go</code> を読む</li>
+        <li>今あるテストで何が守られているかを書く</li>
+        <li>まだ守られていない振る舞いを書く</li>
+      </ol>
+    </div>
+
+    <div class="card">
+      <h2>提案書テンプレート（.md）</h2>
+      <p>最終的には GitHub の PR に添付しやすいよう、Markdown でまとめます。</p>
+      <pre><code># 改善提案: タイトル
+
+## 背景
+
+## 現状の問題
+
+## 提案内容
+
+## 期待できる効果
+
+## 影響範囲
+
+## 実装方針
+
+## テスト方針
+
+## 優先度</code></pre>
+    </div>
+
+    <div class="card">
+      <h2>提出物</h2>
+      <p>この回の終わりでは、たとえば <code>docs/proposals/improve-transform.md</code> のような提案書を 1 本作る想定です。</p>
+    </div>
+
+    <p class="back"><a href="./index.html">← 目次に戻る</a></p>
+  </div>
+</body>
+</html>
